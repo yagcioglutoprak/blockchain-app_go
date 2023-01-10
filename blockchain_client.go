@@ -7,15 +7,27 @@ import (
 	"net/rpc"
 	"strconv"
 	"encoding/json"
+	"time"
 )
 
 // Block represents a block in the blockchain
 type Block struct {
-	Data      string
+	Transactions []*Transaction
 	Timestamp int64
 	Hash      string
 	PrevHash  string
 	Nonce     int
+}
+type Account struct {
+	Name       string
+	Balance    int
+	Transactions []*Transaction
+}
+type Transaction struct {
+	Sender    string
+	Recipient string
+	Amount    int
+	Timestamp int64
 }
 
 // Blockchain represents the full blockchain
@@ -94,6 +106,79 @@ func main() {
 		}
 		w.WriteHeader(http.StatusOK)
 	})
+	http.HandleFunc("/create_account", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+		
+		var body map[string]string
+		json.NewDecoder(r.Body).Decode(&body)
+		name := body["name"]
+		
+		var account Account
+	
+		// Call the CreateAccount method on the blockchain
+		err = client.Call("Blockchain.CreateAccount", name, &account)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		jsonResponse, _ := json.Marshal(account)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonResponse)
+	})
+
+http.HandleFunc("/make_transaction", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+		
+		var body map[string]string
+json.NewDecoder(r.Body).Decode(&body)
+sender := body["sender"]
+receiver := body["receiver"]
+amountStr := body["amount"]
+amount, _ := strconv.Atoi(amountStr)
+
+transaction := &Transaction{sender, receiver, amount, time.Now().Unix()}
+var noReply struct{}
+		
+		// Call the MakeTransaction method on the blockchain
+		err = client.Call("Blockchain.MakeTransaction", transaction, &noReply)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	http.HandleFunc("/get_balance", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+		
+		var body map[string]string
+		json.NewDecoder(r.Body).Decode(&body)
+		name := body["name"]
+		
+		var balance int
+		
+		// Call the GetBalance method on the blockchain
+		err = client.Call("Blockchain.GetBalance", name, &balance)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		
+		//response
+		jsonResponse, _ := json.Marshal(map[string]int{"balance": balance})
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonResponse)
+	})
+
+
 
 	http.ListenAndServe(":8081", nil)
 }
