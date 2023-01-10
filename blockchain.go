@@ -110,12 +110,9 @@ func (b *Block) calculateHash() string {
 // RPC methods
 
 // GetBlockchain returns the full blockchain
-func (bc *Blockchain) GetBlockchain(_ struct{}, reply *[]string) error {
-	hashes := make([]string, len(bc.Blocks))
-	for i, b := range bc.Blocks {
-		hashes[i] = b.Hash
-	}
-	*reply = hashes
+func (bc *Blockchain) GetBlockchain(_ struct{}, reply *Blockchain) error {
+	
+	*reply = *bc
 	return nil
 }
 

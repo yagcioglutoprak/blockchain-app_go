@@ -32,9 +32,10 @@ type Transaction struct {
 
 // Blockchain represents the full blockchain
 type Blockchain struct {
-	Blocks []*Block
+	Blocks    []*Block
+	Accounts  map[string]*Account
+	Target    string
 }
-
 func main() {
 	// Connect to the RPC server
 	conn, err := net.Dial("tcp", "localhost:8080")
@@ -49,15 +50,15 @@ func main() {
 	// Create an HTTP server to handle requests
 	http.HandleFunc("/get_blockchain", func(w http.ResponseWriter, r *http.Request) {
 		// Call the GetBlockchain method on the server to retrieve the blockchain
-		var hashes []string
-		err := client.Call("Blockchain.GetBlockchain", struct{}{}, &hashes)
+		var blockchain Blockchain
+		err := client.Call("Blockchain.GetBlockchain", struct{}{}, &blockchain)
 		if err != nil {
 			http.Error(w, "Error getting blockchain", http.StatusInternalServerError)
 			return
 		}
-		for _, hash := range hashes {
-			fmt.Fprintln(w, hash)
-		}
+		jsonResponse, _ := json.Marshal(blockchain)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonResponse)
 	})
 
 	http.HandleFunc("/get_block", func(w http.ResponseWriter, r *http.Request) {
